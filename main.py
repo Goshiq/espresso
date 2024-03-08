@@ -2,7 +2,8 @@ import sqlite3
 import sys
 
 from PyQt5 import uic  # Импортируем uic
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTableView, QTableWidget, QTableWidgetItem
+from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QLineEdit, QWidgetItem
 
 
 class MyWidget(QMainWindow):
@@ -13,6 +14,8 @@ class MyWidget(QMainWindow):
         self.initDB()
         self.initUI()
         self.pushButton.clicked.connect(self.showAll)
+        self.pushButton_2.clicked.connect(lambda: self.addRow([]))
+        self.pushButton_3.clicked.connect(self.editDB)
 
     def initDB(self):
         self.cur = sqlite3.connect("coffee.sqlite").cursor()
@@ -27,6 +30,9 @@ class MyWidget(QMainWindow):
                    "Объем упаковки"]
         self.tableWidget.setHorizontalHeaderLabels(columns)
         self.tableWidget.resizeColumnsToContents()
+        self.rowMarked = -1
+        self.tableWidget.cellClicked.connect(self.markRow)
+
 
     def showAll(self):
         columns = ["ID",
@@ -52,6 +58,71 @@ class MyWidget(QMainWindow):
         table.resizeColumnsToContents()
         message = f"Нашлось {str(len(result))} записей" if result else "К сожалению, ничего не нашлось"
         self.statusBar().showMessage(message)
+
+    def markRow(self, row, column):
+        self.rowMarked = row
+
+    def addRow(self, data):
+        newWindow = QDialog(self)
+        uic.loadUi("addEditCoffeeForm.ui", newWindow)
+        newWindow.setWindowTitle("Добавить новую запись")
+        newWindow.buttonBox.accepted.connect(lambda: self.saveRow(newWindow.verticalLayout))
+        if data:
+            vert: QVBoxLayout = newWindow.verticalLayout
+            [vert.itemAt(i).widget().setText(text) for i, text in enumerate(data)]
+        newWindow.show()
+
+    def saveRow(self, layout):
+        vert: QVBoxLayout = layout
+        data = [vert.itemAt(i).widget().text() for i in range(layout.count())]
+        if all(data):
+            values = "NULL, " + ', '.join(map(lambda x: f"'{x}'", data))
+            query = f"""
+                    INSERT INTO coffee
+                    VALUES ({values})
+                    """
+            try:
+                self.cur.execute(query)
+                self.showAll()
+            except Exception as e:
+                self.saveRow(layout)
+        else:
+            self.addRow(data)
+
+    def editDB(self):
+        if self.rowMarked < 0:
+            return
+        table: QTableWidget = self.tableWidget
+        columnsNum = table.columnCount()
+        newWindow = QDialog(self)
+        uic.loadUi("addEditCoffeeForm.ui", newWindow)
+        newWindow.setWindowTitle("Редактировать запись")
+        data = [table.item(self.rowMarked, col).text() for col in range(columnsNum)]
+        vert: QVBoxLayout = newWindow.verticalLayout
+        [vert.itemAt(i).widget().setText(text) for i, text in enumerate(data[1:])]
+        newWindow.buttonBox.accepted.connect(lambda: self.updateRow(data[0], newWindow.verticalLayout))
+        newWindow.show()
+
+    def updateRow(self, rowId, layout):
+        vert: QVBoxLayout = layout
+        data = [vert.itemAt(i).widget().text() for i in range(layout.count())]
+        if all(data):
+            query = f"""
+            UPDATE coffee
+            SET sortName = '{data[0]}',
+            grillRate = '{data[1]}',
+            beansOrGround = '{data[2]}',
+            tasteDescription = '{data[3]}',
+            price = '{data[4]}',
+            volume = '{data[5]}'
+            WHERE id = '{rowId}'
+            """
+            try:
+                self.cur.execute(query)
+                self.rowMarked = -1
+                self.showAll()
+            except Exception as e:
+                self.updateRow(rowId, layout)
 
 
 if __name__ == '__main__':
