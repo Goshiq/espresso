@@ -3,7 +3,8 @@ import sys
 
 from PyQt5 import uic  # Импортируем uic
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QLineEdit, QWidgetItem
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, \
+    QLineEdit, QWidgetItem
 
 
 class MyWidget(QMainWindow):
