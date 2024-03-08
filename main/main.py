@@ -84,6 +84,7 @@ class MyWidget(QMainWindow, Ui_MainWindow):
                     """
             try:
                 self.cur.execute(query)
+                self.cur.connection.commit()
                 self.showAll()
             except Exception as e:
                 self.saveRow(layout)
@@ -122,6 +123,7 @@ class MyWidget(QMainWindow, Ui_MainWindow):
             try:
                 self.cur.execute(query)
                 self.rowMarked = -1
+                self.cur.connection.commit()
                 self.showAll()
             except Exception as e:
                 self.updateRow(rowId, layout)
